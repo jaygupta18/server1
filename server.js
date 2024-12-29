@@ -1,67 +1,56 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
-const cors = require("cors");
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
 
-// Initialize Express App
 const app = express();
-app.use(bodyParser.json());
-app.use(cors());
-const URL='mongodb+srv://Jaygupta:Jaygupta@ecom.i8wuogo.mongodb.net/?retryWrites=true&w=majority&appName=ECOM'
-// Connect to MongoDB
-mongoose
-  .connect(URL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.error("MongoDB Connection Failed:", err));
 
-  const itemSchema = new mongoose.Schema({
-    name: String,
-    count: { type: Number, default: 0 },
-  });
-    
-  const Item = mongoose.model("Item", itemSchema);
- 
-  app.get("/items", async (req, res) => {
-    try {
-      const items = await Item.find({});
-      res.status(200).json(items);
-    } catch (err) {
-      res.status(500).send(err.message);
-    }
-  });
-  app.post("/add", async (req, res) => {
-    try {
-      const { name } = req.body;
-      const item = await Item.findOneAndUpdate(
-        { name },
-        { $inc: { count: 1 } },
-        { new: true }
-      );
-      if (item) {
-        console.log("hello");
-        res.status(200).json({ count: item.count }); // Return a successful status
-      } 
-    } catch (error) {
-      
-      res.status(500).json({ error: error.message }); // Internal server error
-    }
-  });
-  
-  app.post("/remove", async (req, res) => {
-    try {
-      const { name } = req.body;
-      const item = await Item.findOne({ name });
-      if (item.count > 0) {
-        const updatedItem = await Item.findOneAndUpdate({ name }, { $inc: { count: -1 } }, { new: true });
-        res.status(200).json(updatedItem);
-      } else {
-        console.log("Count cannot go below 0");
-      }
-    } catch (err) {
-      console.log('helloar remove')
-      res.status(500).send(err.message);
-    }
-  });
-  
+const URL='mongodb+srv://Jaygupta:Jaygupta@ecom.i8wuogo.mongodb.net/?retryWrites=true&w=majority&appName=ECOM';
+app.use(express.json());
+app.use(cors());
+
+
+mongoose.connect(URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+
+const itemSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  category: { type: String, required: true },
+  imageUrl: { type: String, },
+});
+
+const Item = mongoose.model('Item', itemSchema);
+
+// Routes
+app.get('/api/items', async (req, res) => {
+  try {
+    const items = await Item.find();
+    res.json(items);
+  } catch (error) {
+    res.status(500).send('Error fetching items');
+  }
+});
+
+app.post('/api/add', async (req, res) => {
+  try {
+    const newItem = new Item(req.body);
+    await newItem.save();
+    res.status(201).send('Item added');
+  } catch (error) {
+    res.status(500).send('Error adding item');
+  }
+});
+
+app.delete('/api/remove/:id', async (req, res) => {
+  try {
+    await Item.findByIdAndDelete(req.params.id);
+    res.send('Item deleted');
+  } catch (error) {
+    res.status(500).send('Error deleting item');
+  }
+});
+
+// Start the server
 const PORT = 5000;
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
